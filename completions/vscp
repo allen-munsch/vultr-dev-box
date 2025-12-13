@@ -1,0 +1,26 @@
+# vscp bash completion
+# Save as: ~/.local/share/bash-completion/completions/vscp
+
+_vscp_completions() {
+    local cur prev words cword
+    _init_completion || return
+
+    case $cword in
+        1)
+            # First arg: complete files
+            _filedir
+            ;;
+        2)
+            # Second arg: complete hosts from ssh config
+            local hosts
+            hosts=$(grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print $2}' | grep -v '\*')
+            COMPREPLY=($(compgen -W "$hosts" -- "$cur"))
+            ;;
+        3)
+            # Third arg: --run or remote path
+            COMPREPLY=($(compgen -W "--run" -- "$cur"))
+            ;;
+    esac
+}
+
+complete -F _vscp_completions vscp

@@ -1,0 +1,128 @@
+#!/usr/bin/env bash
+set -eo pipefail
+
+#####################################
+# vfwd - Vultr SSH Port Forward helper
+# Usage: vfwd <host> <port> [local_port]
+#####################################
+
+usage() {
+    echo "Usage: vfwd <host> <port> [local_port]"
+    echo ""
+    echo "Forward remote port to localhost via SSH tunnel"
+    echo ""
+    echo "Examples:"
+    echo "  vfwd tiny-box-123 8080           # localhost:8080 -> remote:8080"
+    echo "  vfwd tiny-box-123 8080 4040      # localhost:4040 -> remote:8080"
+    echo "  vfwd tiny-box-123 8080,4040      # forward multiple ports"
+    echo "  vfwd tiny-box-123 8080:4040      # localhost:4040 -> remote:8080 (alt syntax)"
+    echo ""
+    echo "Options:"
+    echo "  -R, --reverse    Reverse forward (local -> remote)"
+    echo "  -b, --background Run in background"
+    echo "  -k, --kill       Kill existing tunnel to host"
+    echo ""
+    echo "Available hosts:"
+    grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print "  " $2}' | grep -v '\*' || echo "  (none found)"
+    exit 1
+}
+
+# Parse flags
+REVERSE=false
+BACKGROUND=false
+KILL=false
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -R|--reverse)
+            REVERSE=true
+            shift
+            ;;
+        -b|--background)
+            BACKGROUND=true
+            shift
+            ;;
+        -k|--kill)
+            KILL=true
+            shift
+            ;;
+        -h|--help)
+            usage
+            ;;
+        -*)
+            echo "❌ Unknown option: $1"
+            usage
+            ;;
+        *)
+            break
+            ;;
+    esac
+done
+
+if [[ $# -lt 1 ]]; then
+    usage
+fi
+
+HOST="$1"
+PORTS="${2:-}"
+
+# Validate host exists in SSH config
+if ! grep -qE "^Host $HOST$" ~/.ssh/config 2>/dev/null; then
+    echo "❌ Host '$HOST' not found in ~/.ssh/config"
+    echo ""
+    echo "Available hosts:"
+    grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print "  " $2}' | grep -v '\*' || echo "  (none)"
+    exit 1
+fi
+
+# Kill existing tunnel
+if [[ "$KILL" == true ]]; then
+    echo "🔪 Killing existing tunnels to $HOST..."
+    pkill -f "ssh.*$HOST.*-L\|ssh.*$HOST.*-R" 2>/dev/null && echo "✅ Killed" || echo "ℹ️  No tunnels found"
+    exit 0
+fi
+
+if [[ -z "$PORTS" ]]; then
+    echo "❌ No port specified"
+    usage
+fi
+
+# Build port forward arguments
+PORT_ARGS=""
+IFS=',' read -ra PORT_LIST <<< "$PORTS"
+
+for PORT_SPEC in "${PORT_LIST[@]}"; do
+    # Handle port:local_port syntax
+    if [[ "$PORT_SPEC" == *":"* ]]; then
+        REMOTE_PORT="${PORT_SPEC%%:*}"
+        LOCAL_PORT="${PORT_SPEC##*:}"
+    else
+        REMOTE_PORT="$PORT_SPEC"
+        LOCAL_PORT="$PORT_SPEC"
+    fi
+    
+    if [[ "$REVERSE" == true ]]; then
+        PORT_ARGS="$PORT_ARGS -R localhost:$REMOTE_PORT:localhost:$LOCAL_PORT"
+        echo "🔄 Reverse: remote:$REMOTE_PORT <- localhost:$LOCAL_PORT"
+    else
+        PORT_ARGS="$PORT_ARGS -L localhost:$LOCAL_PORT:localhost:$REMOTE_PORT"
+        echo "🔗 Forward: localhost:$LOCAL_PORT -> remote:$REMOTE_PORT"
+    fi
+done
+
+echo "🚀 Connecting to $HOST..."
+echo ""
+
+if [[ "$BACKGROUND" == true ]]; then
+    # shellcheck disable=SC2086
+    ssh -f -N $PORT_ARGS "$HOST"
+    echo "✅ Tunnel running in background"
+    echo ""
+    echo "To kill: vfwd --kill $HOST"
+    echo "Or:      pkill -f 'ssh.*$HOST'"
+else
+    echo "Press Ctrl+C to close tunnel"
+    echo "─────────────────────────────"
+    # shellcheck disable=SC2086
+    ssh -N $PORT_ARGS "$HOST"
+fi

@@ -1,0 +1,40 @@
+# vfwd bash completion
+# Save as: ~/.local/share/bash-completion/completions/vfwd
+
+_vfwd_completions() {
+    local cur prev words cword
+    _init_completion 2>/dev/null || {
+        cur="${COMP_WORDS[COMP_CWORD]}"
+        prev="${COMP_WORDS[COMP_CWORD-1]}"
+        cword=$COMP_CWORD
+    }
+
+    # Options
+    local opts="-R --reverse -b --background -k --kill -h --help"
+
+    case "$prev" in
+        -k|--kill)
+            # After --kill, complete hosts
+            local hosts
+            hosts=$(grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print $2}' | grep -v '\*')
+            COMPREPLY=($(compgen -W "$hosts" -- "$cur"))
+            return
+            ;;
+    esac
+
+    if [[ "$cur" == -* ]]; then
+        # Complete options
+        COMPREPLY=($(compgen -W "$opts" -- "$cur"))
+    elif [[ $cword -eq 1 ]] || [[ "${COMP_WORDS[1]}" == -* && $cword -eq 2 ]]; then
+        # First non-option arg: complete hosts
+        local hosts
+        hosts=$(grep -E "^Host " ~/.ssh/config 2>/dev/null | awk '{print $2}' | grep -v '\*')
+        COMPREPLY=($(compgen -W "$hosts $opts" -- "$cur"))
+    else
+        # Port numbers - suggest common ones
+        local common_ports="3000 5000 5173 8000 8080 8085 9000"
+        COMPREPLY=($(compgen -W "$common_ports" -- "$cur"))
+    fi
+}
+
+complete -F _vfwd_completions vfwd

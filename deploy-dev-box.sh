@@ -10,7 +10,7 @@ export VULTR_API_KEY=$(cat ~/.auth/vultr)
 INSTANCE_LABEL="tiny-box-$(date +%s)"
 REGION="ewr"                          # New Jersey (use: vultr-cli regions list)
 PLAN="vc2-1c-1gb"                     # $5/mo 1 CPU, 1GB RAM (use: vultr-cli plans list)
-OS_ID="2284"                          # Ubuntu 24.04 LTS (use: vultr-cli os list)
+OS_ID="2625"                          # Debian Trixie (use: vultr-cli os list)
 
 SSH_KEY_DIR="$HOME/.ssh/vultr"
 SSH_KEY_PATH="$SSH_KEY_DIR/$INSTANCE_LABEL"
@@ -53,7 +53,7 @@ echo "🏗️  Creating instance..."
 echo "   Label:  $INSTANCE_LABEL"
 echo "   Region: $REGION"
 echo "   Plan:   $PLAN"
-echo "   OS:     Ubuntu 24.04 LTS"
+echo "   OS:     Debian Trixie"
 
 INSTANCE_JSON=$(vultr-cli instance create \
     --label "$INSTANCE_LABEL" \

@@ -124,7 +124,7 @@ vscp ./script.sh tiny-box-123456789 --run
 Default instance settings in `deploy-dev-box.sh`:
 - Region: New Jersey (ewr)
 - Plan: vc2-1c-1gb ($5/month)
-- OS: Ubuntu 24.04 LTS
+- OS: Debian Trixie
 
 Edit the script to change these defaults.
 

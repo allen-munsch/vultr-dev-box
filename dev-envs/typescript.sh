@@ -10,6 +10,7 @@ echo "==============================="
 echo "📦 Updating system packages..."
 apt-get update
 DEBIAN_FRONTEND=noninteractive apt-get upgrade -y
+echo 'source ~/.bashrc' >> ~/.bash_history
 
 #####################################
 # Install essential tools
@@ -18,6 +19,8 @@ echo "🔧 Installing essential tools..."
 DEBIAN_FRONTEND=noninteractive apt-get install -y \
     curl \
     wget \
+    sqlite3 \
+    tmux \
     gh \
     git \
     build-essential \
